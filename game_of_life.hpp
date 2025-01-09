@@ -13,7 +13,7 @@ inline int MOD(int a, int b) {
 
 class Grid {
     unsigned char* grid = nullptr;
-    size_t rows, cols, size, _byte_count;
+    size_t rows, cols, element_count, _byte_count;
 
     inline bool _get_at_bit_index(size_t _index) const {
         return (grid[_index>>3] & (0x1 << (_index & 0x7))) != 0; // != 0 not strictly necessary, but it ensures that the bits are canonically set for bools.
@@ -30,26 +30,28 @@ class Grid {
 
 public:
     Grid(size_t rows, size_t cols)
-        : rows(rows), cols(cols) , size(rows * cols) {
-        _byte_count = 1 + (size / sizeof(char));
+        : rows(rows), cols(cols) , element_count(rows * cols) {
+        _byte_count = 1 + (element_count / 8);
         grid = new unsigned char[_byte_count];
         for (size_t i = 0; i < _byte_count; i++) {
             grid[i] = 0;
         }
     }
+    Grid(size_t rows, size_t cols, const unsigned char* data) // Be very careful with this constructor, it does not check if the data is valid and also does no copying. _byte_count is also left uninitialized.
+        : rows(rows), cols(cols), element_count(rows * cols), grid(const_cast<unsigned char*>(data)) {}
     Grid() {}
     ~Grid() {
         if (grid) delete[] grid; // grid might be null because of the default constructor
     }
 
-    Grid(const Grid& other) : rows(other.rows), cols(other.cols), size(other.size), _byte_count(other._byte_count) {
+    Grid(const Grid& other) : rows(other.rows), cols(other.cols), element_count(other.element_count), _byte_count(other._byte_count) {
         grid = new unsigned char[_byte_count];
         for (size_t i = 0; i < _byte_count; i++) {
             grid[i] = other.grid[i];
         }
     }
 
-    Grid(Grid&& other) : rows(other.rows), cols(other.cols), size(other.size), _byte_count(other._byte_count) {
+    Grid(Grid&& other) : rows(other.rows), cols(other.cols), element_count(other.element_count), _byte_count(other._byte_count) {
         grid = other.grid;
         other.grid = nullptr;
     }
@@ -59,7 +61,7 @@ public:
         if (grid) delete[] grid;
         rows = other.rows;
         cols = other.cols;
-        size = other.size;
+        element_count = other.element_count;
         _byte_count = other._byte_count;
         grid = new unsigned char[_byte_count];
         for (size_t i = 0; i < _byte_count; i++) {
@@ -73,18 +75,18 @@ public:
         if (grid) delete[] grid;
         rows = other.rows;
         cols = other.cols;
-        size = other.size;
+        element_count = other.element_count;
         _byte_count = other._byte_count;
         grid = other.grid;
         other.grid = nullptr;
         return *this;
     }
 
-    inline bool get(int row, int col) const {
+     bool get(int row, int col) const {
         return _get_at_bit_index(_to_index(row, col));
     }
 
-    inline void set(int row, int col, bool val) {
+     void set(int row, int col, bool val) {
         _set_at_bit_index(_to_index(row, col), val);
     }
 
@@ -109,14 +111,32 @@ public:
         }
     }
 
+    const unsigned char* data() const {
+        return grid;
+    }
+
+    size_t size() const {
+        return _byte_count;
+    }
+
+    void _nullify() { grid = nullptr; } // Call this function to prevent the destructor from deleting the data
+
     Grid subgrid(int start_row, int start_col, int end_row, int end_col) const {
         Grid sub(MOD(end_row - start_row, rows), MOD(end_col - start_col, cols));
-        for (int i = start_row; i < end_row; i++) {
-            for (int j = start_col; j < end_col; j++) {
-                sub.set(i - start_row, j - start_col, get(i, j));
+        for (int i = 0; i < sub.rows; i++) {
+            for (int j = 0; j < sub.cols; j++) {
+                sub.set(i, j, get(i + start_row, j + start_col));
             }
         }
         return sub;
+    }
+
+    void set_subgrid(int start_row, int start_col, const Grid& subgrid) {
+        for (int i = 0; i < subgrid.rows; i++) {
+            for (int j = 0; j < subgrid.cols; j++) {
+                set(start_row + i, start_col + j, subgrid.get(i, j));
+            }
+        }
     }
 
     
@@ -154,17 +174,17 @@ public:
 
 class GameOfLife {
     Grid state, next_state;
-    size_t rows, cols, size;
+    size_t rows, cols, element_count;
 
 public:
     GameOfLife(size_t rows, size_t cols)
-        : state(rows, cols), next_state(rows, cols), rows(rows), cols(cols), size(rows * cols) {}
+        : state(rows, cols), next_state(rows, cols), rows(rows), cols(cols), element_count(rows * cols) {}
 
     GameOfLife() {}
     ~GameOfLife() = default;
 
-    GameOfLife(const GameOfLife& other) : state(other.state), next_state(other.next_state), rows(other.rows), cols(other.cols), size(other.size) {}
-    GameOfLife(GameOfLife&& other) : state(std::move(other.state)), next_state(std::move(other.next_state)), rows(other.rows), cols(other.cols), size(other.size) {}
+    GameOfLife(const GameOfLife& other) : state(other.state), next_state(other.next_state), rows(other.rows), cols(other.cols), element_count(other.element_count) {}
+    GameOfLife(GameOfLife&& other) : state(std::move(other.state)), next_state(std::move(other.next_state)), rows(other.rows), cols(other.cols), element_count(other.element_count) {}
 
     GameOfLife& operator=(const GameOfLife& other) {
         if (this == &other) return *this;
@@ -172,7 +192,7 @@ public:
         next_state = other.next_state;
         rows = other.rows;
         cols = other.cols;
-        size = other.size;
+        element_count = other.element_count;
         return *this;
     }
 
@@ -182,7 +202,7 @@ public:
         next_state = std::move(other.next_state);
         rows = other.rows;
         cols = other.cols;
-        size = other.size;
+        element_count = other.element_count;
         return *this;
     }
 
@@ -236,6 +256,18 @@ public:
         state.print();
     }
 
+    void print_info() const {
+        std::cout << "Rows: " << rows << ", Cols: " << cols << std::endl;
+    }
+
+    const unsigned char* data() const {
+        return state.data();
+    }
+
+    const size_t size() const {
+        return state.size();
+    }
+
 
     // Some getter functions
     size_t get_rows() const { return rows; }
@@ -244,9 +276,13 @@ public:
 
     // Some subgrid utilities
     GameOfLife subgame(int start_row, int start_col, int end_row, int end_col) const {
-        GameOfLife sub(end_row - start_row, end_col - start_col);
+        GameOfLife sub(MOD(end_row - start_row, rows), MOD(end_col - start_col, cols));
         sub.state = state.subgrid(start_row, start_col, end_row, end_col);
         return sub;
+    }
+
+    void set_subgame(int start_row, int start_col, const Grid& subgrid) {
+        state.set_subgrid(start_row, start_col, subgrid);
     }
 
     std::vector<unsigned char> get_row(int row) const {

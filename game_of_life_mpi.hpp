@@ -7,8 +7,10 @@
 
 class MPIProcess {
     size_t proc_rows, proc_cols;        // Number of rows and columns in the MPI grid
-    int rank;                           // MPI rank of the process
     int proc_row, proc_col;             // Process coordinates in the grid
+    int rank;                           // MPI rank of the process
+    int root;                           // Root process rank
+    size_t grid_rows, grid_cols;        // Dimensions of the global grid
     size_t subgrid_rows, subgrid_cols;  // Dimensions of this process's subgrid (IMPORTANT: Note that each dimension is two less than the actual dimensions of subgame because subgame has a border of 1 cell at each side)
     int starting_row, starting_col;     // Starting coordinates of the subgrid
     int ending_row, ending_col;         // Ending coordinates of the subgrid
@@ -23,8 +25,8 @@ class MPIProcess {
     unsigned char* right_col_recv = nullptr;
 
 public:
-    MPIProcess(size_t proc_rows, size_t proc_cols, const GameOfLife& game)
-        : proc_rows(proc_rows), proc_cols(proc_cols)
+    MPIProcess(const GameOfLife& game, size_t proc_rows, size_t proc_cols, int root)
+        : proc_rows(proc_rows), proc_cols(proc_cols), root(root), grid_rows(game.get_rows()), grid_cols(game.get_cols())
         {
         // Initialize MPI
         int size;
@@ -37,12 +39,12 @@ public:
         rank_to_coords(rank, proc_row, proc_col);
 
         // Calculate subgrid dimensions and positions
-        subgrid_rows = game.get_rows() / proc_rows; // only temporary
-        subgrid_cols = game.get_cols() / proc_cols; // same here
+        subgrid_rows = grid_rows / proc_rows; // only temporary
+        subgrid_cols = grid_cols / proc_cols; // same here
         starting_row = proc_row * subgrid_rows;
         starting_col = proc_col * subgrid_cols;
-        ending_row = (proc_row == proc_rows - 1) ? game.get_rows() : starting_row + subgrid_rows;
-        ending_col = (proc_col == proc_cols - 1) ? game.get_cols() : starting_col + subgrid_cols;
+        ending_row = (proc_row == proc_rows - 1) ? grid_rows : starting_row + subgrid_rows;
+        ending_col = (proc_col == proc_cols - 1) ? grid_cols : starting_col + subgrid_cols;
         subgrid_rows = ending_row - starting_row;
         subgrid_cols = ending_col - starting_col;
 
@@ -112,6 +114,34 @@ public:
         MPI_Waitall(4, requests, statuses);
     }
 
+    GameOfLife gather_subgrids() const {
+        int sendcount = ((grid_rows / proc_rows) + MOD(grid_rows, proc_rows)) * ((grid_cols / proc_cols) + MOD(grid_cols, proc_cols)) / 8 + 1;
+        unsigned char* recv_buffer = nullptr;
+        if (rank == root) {
+            recv_buffer = new unsigned char[sendcount * proc_rows * proc_cols];
+        }
+        GameOfLife send_subgame = subgame.subgame(1, 1, -1, -1);
+        unsigned char* send_buffer = new unsigned char[sendcount];
+        memcpy(send_buffer, send_subgame.data(), send_subgame.size());
+        for (size_t i = send_subgame.size(); i < sendcount; i++) send_buffer[i] = 0;
+        
+        MPI_Gather(send_buffer, sendcount, MPI_UNSIGNED_CHAR, recv_buffer, sendcount, MPI_UNSIGNED_CHAR, root, MPI_COMM_WORLD);
+
+        if (rank != root) return GameOfLife(0, 0);
+
+        GameOfLife game(grid_rows, grid_cols);
+        for (int i = 0; i < proc_rows; i++) {
+            for (int j = 0; j < proc_cols; j++) {
+                Grid current_sub_grid((i == proc_rows - 1) ? grid_rows - i * subgrid_rows : subgrid_rows,
+                                      (j == proc_cols - 1) ? grid_cols - j * subgrid_cols : subgrid_cols,
+                                      recv_buffer + (i * proc_cols + j) * sendcount);
+                game.set_subgame(i * (grid_rows / proc_rows), j * (grid_cols / proc_cols), current_sub_grid);
+                current_sub_grid._nullify();
+            }
+        }
+        delete[] recv_buffer;
+        return game;
+    }
 
     // Accessors for the subgrid dimensions
     size_t get_subgrid_rows() const { return subgrid_rows; }
@@ -136,6 +166,5 @@ public:
                   << "), cols [" << starting_col << "-" << ending_col << ")\n";
     }
 };
-
 
 #endif
