@@ -9,4 +9,5 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --exclusive
 
+module load mpi/openmpi/4.1.1
 make
