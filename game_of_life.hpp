@@ -237,16 +237,16 @@ public:
         }
 
         // Write PPM header
-        file << "P2\n";
+        file << "P5\n";
         file << cols << " " << rows << "\n";
-        file << "1\n";
+        file << "255\n";
 
         // Write pixel data
         for (size_t i = 0; i < rows; i++) {
             for (size_t j = 0; j < cols; j++) {
-                file << (state.get(i, j) & 1) << " ";
+		    char pixel = state.get(i, j) * 255;
+                file << pixel;
             }
-            file << "\n";
         }
 
         file.close();
