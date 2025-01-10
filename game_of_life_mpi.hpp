@@ -2,8 +2,9 @@
 #define GAME_OF_LIFE_MPI_HPP
 
 #include "game_of_life.hpp"
+#include <cstring>
 #include <stdexcept>
-#include <mpi.h>
+// #include <mpi.h>
 
 class MPIProcess {
     size_t proc_rows, proc_cols;        // Number of rows and columns in the MPI grid
