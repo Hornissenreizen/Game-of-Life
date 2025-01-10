@@ -4,6 +4,7 @@
 #include "game_of_life.hpp"
 #include <stdexcept>
 #include <mpi.h>
+#include <cstring>
 
 class MPIProcess {
     size_t proc_rows, proc_cols;        // Number of rows and columns in the MPI grid
