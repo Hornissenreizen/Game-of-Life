@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <sstream>
 #include <mpi.h>
+#include <cstring>
 
 class MPIProcess {
     size_t proc_rows, proc_cols;        // Number of rows and columns in the MPI grid
