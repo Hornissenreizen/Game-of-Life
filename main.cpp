@@ -14,8 +14,8 @@ int main(int argc, char** argv) {
     GameOfLife game(11, 17);
     game.init({{0,1},{1,2},{2,0},{2,1},{2,2}});
 
-    size_t rows;
-    size_t cols;
+    size_t proc_rows;
+    size_t proc_cols;
 
     if (argc < 3) {
 	rows = PROC_ROWS;
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 
 	   
 
-    MPIProcess mpi_proc(game, rows, cols, ROOT);
+    MPIProcess mpi_proc(game, proc_rows, proc_cols, ROOT);
 
     MPI_Barrier(MPI_COMM_WORLD);
     auto start = MPI_Wtime();
