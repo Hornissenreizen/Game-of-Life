@@ -3,6 +3,7 @@
 
 #include "game_of_life.hpp"
 #include <stdexcept>
+#include <sstream>
 #include <mpi.h>
 
 class MPIProcess {
@@ -25,6 +26,7 @@ class MPIProcess {
     unsigned char* right_col_recv = nullptr;
 
 public:
+    MPIProcess(const std::string& filename, size_t proc_rows, size_t proc_cols, int root);
     MPIProcess(const GameOfLife& game, size_t proc_rows, size_t proc_cols, int root)
         : proc_rows(proc_rows), proc_cols(proc_cols), root(root), grid_rows(game.get_rows()), grid_cols(game.get_cols())
         {
@@ -143,6 +145,9 @@ public:
         return game;
     }
 
+    void to_pgm(const std::string&) const;
+    void initialize_from_pgm(const std::string&);
+
     // Accessors for the subgrid dimensions
     size_t get_subgrid_rows() const { return subgrid_rows; }
     size_t get_subgrid_cols() const { return subgrid_cols; }
@@ -166,5 +171,153 @@ public:
                   << "), cols [" << starting_col << "-" << ending_col << ")\n";
     }
 };
+
+
+void MPIProcess::to_pgm(const std::string& filename) const {
+    MPI_File file;
+    MPI_Status status;
+
+    // Open the file for writing
+    MPI_File_open(MPI_COMM_WORLD, filename.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file);
+
+    int header_size = 0;
+    if (rank == root) {
+        // Construct and write the header on the root process
+        std::ostringstream header;
+        header << "P5\n" << grid_cols << " " << grid_rows << "\n1\n";
+        std::string header_str = header.str();
+
+        header_size = header_str.size();
+        MPI_File_write(file, header_str.c_str(), header_size, MPI_CHAR, &status);
+    }
+
+    // Broadcast the size of the header to all processes
+    MPI_Bcast(&header_size, 1, MPI_INT, root, MPI_COMM_WORLD);
+
+    // Synchronize before writing data
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // Get the subgame data for this process, excluding the ghost border
+    GameOfLife subgame_without_border = subgame.subgame(1, 1, -1, -1);
+
+    // Serialize the subgrid into a linear buffer of bytes
+    std::vector<unsigned char> local_data(subgame_without_border.get_rows() * subgame_without_border.get_cols());
+    for (size_t i = 0; i < subgame_without_border.get_rows(); ++i) {
+        for (size_t j = 0; j < subgame_without_border.get_cols(); ++j) {
+            local_data[i * subgame_without_border.get_cols() + j] = subgame_without_border.get(i, j) ? 1 : 0;
+        }
+    }
+
+    // Calculate the offset for each process's data in the global file
+    MPI_Offset offset = header_size +
+                        starting_row * grid_cols +  // Offset to the starting row
+                        starting_col;              // Offset to the starting column in the row
+
+    // Write the subgrid data for this process
+    for (size_t i = 0; i < subgrid_rows; ++i) {
+        MPI_File_write_at(file, offset + i * grid_cols, &local_data[i * subgrid_cols], subgrid_cols, MPI_UNSIGNED_CHAR, &status);
+    }
+
+    // Close the file
+    MPI_File_close(&file);
+}
+
+MPIProcess::MPIProcess(const std::string& filename, size_t proc_rows, size_t proc_cols, int root = 0)
+    : proc_rows(proc_rows), proc_cols(proc_cols), root(root) {
+    // Initialize MPI
+    int size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if (size != proc_rows * proc_cols) {
+        throw std::runtime_error("Number of processes must be equal to proc_rows * proc_cols");
+    }
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    rank_to_coords(rank, proc_row, proc_col);
+
+    // File header variables
+    size_t global_rows, global_cols;
+    MPI_Offset header_offset = 0;
+
+    if (rank == root) {
+        // Root reads the file header to determine global dimensions
+        std::ifstream file(filename, std::ios::binary);
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open the file");
+        }
+
+        std::string magic;
+        file >> magic;
+        if (magic != "P5") {
+            throw std::runtime_error("Unsupported file format (only PGM P5 is supported)");
+        }
+
+        file >> global_cols >> global_rows; // Read width and height
+        file.ignore(); // Skip the line with max intensity value
+        file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Skip any extra newlines or carriage returns after header
+        header_offset = file.tellg(); // Start of pixel data
+    }
+
+    // Broadcast the global dimensions and the header offset
+    MPI_Bcast(&global_rows, 1, MPI_UNSIGNED_LONG, root, MPI_COMM_WORLD);
+    MPI_Bcast(&global_cols, 1, MPI_UNSIGNED_LONG, root, MPI_COMM_WORLD);
+    MPI_Bcast(&header_offset, sizeof(header_offset), MPI_BYTE, root, MPI_COMM_WORLD);
+
+    grid_rows = global_rows;
+    grid_cols = global_cols;
+
+    // Compute the dimensions of the subgrid for this process
+    subgrid_rows = grid_rows / proc_rows;
+    subgrid_cols = grid_cols / proc_cols;
+    starting_row = proc_row * subgrid_rows;
+    starting_col = proc_col * subgrid_cols;
+    ending_row = (proc_row == proc_rows - 1) ? grid_rows : starting_row + subgrid_rows;
+    ending_col = (proc_col == proc_cols - 1) ? grid_cols : starting_col + subgrid_cols;
+    subgrid_rows = ending_row - starting_row;
+    subgrid_cols = ending_col - starting_col;
+
+    // Allocate space for the local subgame (including border)
+    subgame = GameOfLife(subgrid_rows + 2, subgrid_cols + 2); // +2 for borders
+
+    // Allocate local data buffer for subgrid
+    unsigned char* local_data = new unsigned char[subgrid_rows * subgrid_cols];
+
+    // Read the subgrid data using MPI I/O
+    MPI_File mpi_file;
+    MPI_File_open(MPI_COMM_WORLD, filename.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &mpi_file);
+
+    for (size_t i = 0; i < subgrid_rows; i++) {
+        // Calculate the exact offset in the global PGM data for this row
+        MPI_Offset file_offset = header_offset + (starting_row + i) * grid_cols + starting_col;
+        MPI_File_read_at(mpi_file, file_offset, local_data + i * subgrid_cols, subgrid_cols, MPI_UNSIGNED_CHAR, MPI_STATUS_IGNORE);
+    }
+
+    // Close the MPI file
+    MPI_File_close(&mpi_file);
+
+    // Populate the subgame grid with the data from the local buffer
+    for (size_t i = 0; i < subgrid_rows; i++) {
+        for (size_t j = 0; j < subgrid_cols; j++) {
+            subgame.set(i + 1, j + 1, local_data[i * subgrid_cols + j]); // Offset for borders
+        }
+    }
+
+    if (rank == root) {
+        subgame.print();
+    }
+
+    delete[] local_data;
+
+    // Calculate the ranks of the neighboring processes
+    neighbor_ranks[0] = coords_to_rank(proc_row - 1, proc_col);  // North
+    neighbor_ranks[1] = coords_to_rank(proc_row + 1, proc_col);  // South
+    neighbor_ranks[2] = coords_to_rank(proc_row, proc_col + 1);  // East
+    neighbor_ranks[3] = coords_to_rank(proc_row, proc_col - 1);  // West
+
+    // Allocate buffers for exchanging border data
+    top_row_recv = new unsigned char[subgame.get_cols() / 8 + 1];
+    bottom_row_recv = new unsigned char[subgame.get_cols() / 8 + 1];
+    left_col_recv = new unsigned char[subgame.get_rows() / 8 + 1];
+    right_col_recv = new unsigned char[subgame.get_rows() / 8 + 1];
+}
 
 #endif

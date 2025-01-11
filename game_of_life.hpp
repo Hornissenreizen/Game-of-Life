@@ -216,6 +216,10 @@ public:
         return state.get(row, col);
     }
 
+    inline void set(int row, int col, bool val) {
+        state.set(row, col, val);
+    }
+
     void init(std::initializer_list<std::initializer_list<size_t>>&& l) {
         for (auto& pair : l) {
             state.set(*pair.begin(), *(pair.begin() + 1), true);
