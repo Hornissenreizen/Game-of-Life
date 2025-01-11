@@ -96,8 +96,8 @@ public:
         // Send and receive the border rows
         MPI_Isend(top_row_send.data(), top_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[0], 0, MPI_COMM_WORLD, &requests[0]);
         MPI_Isend(bottom_row_send.data(), bottom_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[1], 0, MPI_COMM_WORLD, &requests[1]);
-        MPI_Recv(top_row_recv, top_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[0], 0, MPI_COMM_WORLD, &statuses[0]);
         MPI_Recv(bottom_row_recv, bottom_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[1], 0, MPI_COMM_WORLD, &statuses[1]);
+        MPI_Recv(top_row_recv, top_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[0], 0, MPI_COMM_WORLD, &statuses[0]);
 
         subgame.set_row(0, top_row_recv);
         subgame.set_row(-1, bottom_row_recv);
@@ -107,8 +107,8 @@ public:
         // Send and receive the border columns
         MPI_Isend(left_col_send.data(), left_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[3], 0, MPI_COMM_WORLD, &requests[2]);
         MPI_Isend(right_col_send.data(), right_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[2], 0, MPI_COMM_WORLD, &requests[3]);
-        MPI_Recv(left_col_recv, left_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[3], 0, MPI_COMM_WORLD, &statuses[2]);
         MPI_Recv(right_col_recv, right_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[2], 0, MPI_COMM_WORLD, &statuses[3]);
+        MPI_Recv(left_col_recv, left_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[3], 0, MPI_COMM_WORLD, &statuses[2]);
 
         subgame.set_col(0, left_col_recv);
         subgame.set_col(-1, right_col_recv);
@@ -299,10 +299,6 @@ MPIProcess::MPIProcess(const std::string& filename, size_t proc_rows, size_t pro
         for (size_t j = 0; j < subgrid_cols; j++) {
             subgame.set(i + 1, j + 1, local_data[i * subgrid_cols + j]); // Offset for borders
         }
-    }
-
-    if (rank == root) {
-        subgame.print();
     }
 
     delete[] local_data;
