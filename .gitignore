@@ -33,3 +33,6 @@ build
 *.exe
 *.out
 *.app
+
+# Generated Portalble Pixel Maps
+*.ppm
