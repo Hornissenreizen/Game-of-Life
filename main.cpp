@@ -25,18 +25,22 @@ int main(int argc, char** argv) {
     	proc_cols = atoi(argv[2]);
     }
 
-	   
-
     MPIProcess mpi_proc(game, proc_rows, proc_cols, ROOT);
 
     MPI_Barrier(MPI_COMM_WORLD);
     auto start = MPI_Wtime();
-    for (size_t i = 0; i < NO_TICKS; i++) {
-        mpi_proc.exchange();
-        mpi_proc.tick();
+    if (proc_cols == 1 && proc_cols == 1) {
+        for (size_t i = 0; i < NO_TICKS; i++) {
+            game.tick();
+        }
+    } else {
+        for (size_t i = 0; i < NO_TICKS; i++) {
+            mpi_proc.exchange();
+            mpi_proc.tick();
+        }
     }
 
-    GameOfLife result = mpi_proc.gather_subgrids();
+    GameOfLife result = (proc_cols == 1 && proc_cols == 1) ? game : mpi_proc.gather_subgrids();
     if (mpi_proc.get_rank() == ROOT) {
         result.print();
 	    result.to_pgm("Ende.ppm");
