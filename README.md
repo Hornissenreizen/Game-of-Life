@@ -8,11 +8,6 @@ make
 ```
 
 # Unit-Tests
-Run tests with
-```bash
-make test
-```
-Or for the parallelized version:
-```bash
-make test_mpi
-```
+For now: compile tests.cpp and run.
+Will be changed soon when MPI-Tests
+are Implemented.
