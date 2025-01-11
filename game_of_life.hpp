@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <limits>
 
 
 inline int MOD(int a, int b) {
@@ -230,27 +231,8 @@ public:
         std::swap(state, next_state); // Swap the two Grid objects
     }
 
-    void to_pgm(const std::string& filename) const {
-        std::ofstream file(filename);
-        if (!file.is_open()) {
-            throw std::ios_base::failure("Failed to open file");
-        }
-
-        // Write PPM header
-        file << "P2\n";
-        file << cols << " " << rows << "\n";
-        file << "1\n";
-
-        // Write pixel data
-        for (size_t i = 0; i < rows; i++) {
-            for (size_t j = 0; j < cols; j++) {
-                file << (state.get(i, j) & 1) << " ";
-            }
-            file << "\n";
-        }
-
-        file.close();
-    }
+    void to_pgm(const std::string&) const;
+    void initialize_from_pgm(const std::string&);
 
     void print() const {
         state.print();
@@ -301,5 +283,81 @@ public:
         state.set_col(col, col_vec);
     }
 };
+
+
+// converting to and initializing from pgm
+void GameOfLife::initialize_from_pgm(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::ios_base::failure("Failed to open file");
+    }
+
+    std::string magic_number;
+    file >> magic_number;
+
+    if (magic_number != "P5") {
+        throw std::invalid_argument("File is not in PGM P5 format");
+    }
+
+    // Skip comments
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    while (file.peek() == '#') {
+        file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }
+
+    // Read dimensions and maximum gray value
+    file >> cols >> rows;
+    int max_val;
+    file >> max_val;
+    file.ignore(1); // Skip single whitespace character after max_val
+
+    if (max_val != 1) {
+        throw std::invalid_argument("Invalid max_val, only binary PGM (max_val = 1) is supported");
+    }
+
+    // Resize the grid to match the dimensions
+    state = Grid(rows, cols);
+    next_state = Grid(rows, cols);
+    element_count = rows * cols;
+
+    // Read pixel data
+    std::vector<unsigned char> data(rows * cols);
+    file.read(reinterpret_cast<char*>(data.data()), rows * cols);
+
+    if (file.gcount() != static_cast<std::streamsize>(rows * cols)) {
+        throw std::ios_base::failure("Unexpected end of file while reading pixel data");
+    }
+
+    // Populate the grid
+    for (size_t i = 0; i < rows; ++i) {
+        for (size_t j = 0; j < cols; ++j) {
+            state.set(i, j, data[i * cols + j] != 0);
+        }
+    }
+
+    file.close();
+}
+
+void GameOfLife::to_pgm(const std::string& filename) const {
+    std::ofstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::ios_base::failure("Failed to open file");
+    }
+
+    // Write PGM header
+    file << "P5\n";
+    file << cols << " " << rows << "\n";
+    file << "1\n";
+
+    // Write pixel data
+    for (size_t i = 0; i < rows; i++) {
+        for (size_t j = 0; j < cols; j++) {
+            unsigned char pixel = state.get(i, j) ? 1 : 0;
+            file.write(reinterpret_cast<char*>(&pixel), 1);
+        }
+    }
+
+    file.close();
+}
 
 #endif

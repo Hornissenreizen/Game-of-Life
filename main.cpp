@@ -11,7 +11,8 @@ int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
 
     GameOfLife game(11, 17);
-    game.init({{0,1},{1,2},{2,0},{2,1},{2,2}});
+    // game.init({{0,1},{1,2},{2,0},{2,1},{2,2}});
+    game.initialize_from_pgm("../init.pgm");
 
     MPIProcess mpi_proc(game, PROC_ROWS, PROC_COLS, ROOT);
 
@@ -23,6 +24,7 @@ int main(int argc, char** argv) {
     GameOfLife result = mpi_proc.gather_subgrids();
     if (mpi_proc.get_rank() == ROOT) {
         result.print();
+        result.to_pgm("result.pgm");
     }
 
     MPI_Finalize();
