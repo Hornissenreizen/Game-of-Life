@@ -2,9 +2,7 @@
 #define GAME_OF_LIFE_MPI_HPP
 
 #include "game_of_life.hpp"
-#include <cstring>
 #include <stdexcept>
-// #include <mpi.h>
 #include <cstring>
 
 class MPIProcess {
@@ -42,13 +40,16 @@ public:
 
         // Calculate subgrid dimensions and positions
         subgrid_rows = grid_rows / proc_rows; // only temporary
-        subgrid_cols = grid_cols / proc_cols; // same here
+        subgrid_cols = grid_cols/ proc_cols; // same here
         starting_row = proc_row * subgrid_rows;
         starting_col = proc_col * subgrid_cols;
         ending_row = (proc_row == proc_rows - 1) ? grid_rows : starting_row + subgrid_rows;
         ending_col = (proc_col == proc_cols - 1) ? grid_cols : starting_col + subgrid_cols;
         subgrid_rows = ending_row - starting_row;
         subgrid_cols = ending_col - starting_col;
+
+        if(rank == root) std::cout << "root: ";
+        std::cout << "proc row and col " << proc_row << " " << proc_col << std::endl;
 
         subgame = game.subgame(starting_row - 1, starting_col - 1, ending_row + 1, ending_col + 1);
 
@@ -87,38 +88,46 @@ public:
     }
 
     void exchange() {
-        MPI_Request requests[4];
-        MPI_Status statuses[4];
-
-        std::vector<unsigned char> top_row_send = subgame.get_row(1);
-        std::vector<unsigned char> bottom_row_send = subgame.get_row(-2);
+        MPI_Request row_requests[2], col_requests[2];
+        MPI_Status row_statuses[2], col_statuses[2];
         
         // Send and receive the border rows
-        MPI_Isend(top_row_send.data(), top_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[0], 0, MPI_COMM_WORLD, &requests[0]);
-        MPI_Isend(bottom_row_send.data(), bottom_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[1], 0, MPI_COMM_WORLD, &requests[1]);
-        MPI_Recv(top_row_recv, top_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[0], 0, MPI_COMM_WORLD, &statuses[0]);
-        MPI_Recv(bottom_row_recv, bottom_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[1], 0, MPI_COMM_WORLD, &statuses[1]);
+        if (proc_rows > 1) {
+            std::vector<unsigned char> top_row_send = subgame.get_row(1);
+            std::vector<unsigned char> bottom_row_send = subgame.get_row(-2);
 
-        subgame.set_row(0, top_row_recv);
-        subgame.set_row(-1, bottom_row_recv);
-        std::vector<unsigned char> left_col_send = subgame.get_col(1);
-        std::vector<unsigned char> right_col_send = subgame.get_col(-2);
+            MPI_Isend(top_row_send.data(), top_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[0], 0, MPI_COMM_WORLD, &row_requests[0]);
+            MPI_Isend(bottom_row_send.data(), bottom_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[1], 0, MPI_COMM_WORLD, &row_requests[1]);
+            MPI_Recv(top_row_recv, top_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[0], 0, MPI_COMM_WORLD, &row_statuses[0]);
+            MPI_Recv(bottom_row_recv, bottom_row_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[1], 0, MPI_COMM_WORLD, &row_statuses[1]);
+            MPI_Waitall(2, row_requests, row_statuses);
+            subgame.set_row(0, top_row_recv);
+            subgame.set_row(-1, bottom_row_recv);
+        }
+
         
         // Send and receive the border columns
-        MPI_Isend(left_col_send.data(), left_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[3], 0, MPI_COMM_WORLD, &requests[2]);
-        MPI_Isend(right_col_send.data(), right_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[2], 0, MPI_COMM_WORLD, &requests[3]);
-        MPI_Recv(left_col_recv, left_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[3], 0, MPI_COMM_WORLD, &statuses[2]);
-        MPI_Recv(right_col_recv, right_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[2], 0, MPI_COMM_WORLD, &statuses[3]);
+        if (proc_rows > 1) {
+            std::vector<unsigned char> left_col_send = subgame.get_col(1);
+            std::vector<unsigned char> right_col_send = subgame.get_col(-2);
+        
+            MPI_Isend(left_col_send.data(), left_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[3], 0, MPI_COMM_WORLD, &col_requests[0]);
+            MPI_Isend(right_col_send.data(), right_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[2], 0, MPI_COMM_WORLD, &col_requests[1]);
+            MPI_Recv(left_col_recv, left_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[3], 0, MPI_COMM_WORLD, &col_statuses[0]);
+            MPI_Recv(right_col_recv, right_col_send.size(), MPI_UNSIGNED_CHAR, neighbor_ranks[2], 0, MPI_COMM_WORLD, &col_statuses[1]);
+            subgame.set_col(0, left_col_recv);
+            subgame.set_col(-1, right_col_recv);
 
-        subgame.set_col(0, left_col_recv);
-        subgame.set_col(-1, right_col_recv);
-
-        MPI_Waitall(4, requests, statuses);
+            MPI_Waitall(2, col_requests, col_statuses);
+        }
     }
 
     GameOfLife gather_subgrids() const {
         int sendcount = ((grid_rows / proc_rows) + MOD(grid_rows, proc_rows)) * ((grid_cols / proc_cols) + MOD(grid_cols, proc_cols)) / 8 + 1;
         unsigned char* recv_buffer = nullptr;
+        if (proc_cols == 1 && proc_rows == 1) {
+            return subgame;
+        }
         if (rank == root) {
             recv_buffer = new unsigned char[sendcount * proc_rows * proc_cols];
         }

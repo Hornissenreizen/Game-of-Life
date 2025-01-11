@@ -18,11 +18,11 @@ int main(int argc, char** argv) {
     size_t proc_cols;
 
     if (argc < 3) {
-	rows = PROC_ROWS;
-	cols = PROC_COLS;
+	    proc_rows = PROC_ROWS;
+	    proc_cols = PROC_COLS;
     } else {
-    	rows = atoi(argv[1]);
-    	cols = atoi(argv[2]);
+    	proc_rows = atoi(argv[1]);
+    	proc_cols = atoi(argv[2]);
     }
 
 	   
@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
     GameOfLife result = mpi_proc.gather_subgrids();
     if (mpi_proc.get_rank() == ROOT) {
         result.print();
-	result.to_pgm("Ende.ppm");
+	    result.to_pgm("Ende.ppm");
     }
     MPI_Barrier(MPI_COMM_WORLD);
     auto end = MPI_Wtime();
