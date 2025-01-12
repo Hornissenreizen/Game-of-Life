@@ -1,0 +1,106 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[utf8]{inputenc} % Handles UTF-8 input
+\usepackage[T1]{fontenc}    % Proper output encoding
+\usepackage{lmodern}        % Improved font rendering
+\usepackage{geometry}       % Adjust margins
+\geometry{a4paper, margin=1in}
+\usepackage{amsmath}        % Math symbols and environments
+\usepackage{amssymb}        % Additional math symbols
+\usepackage{graphicx}       % Include images
+\usepackage{hyperref}       % Hyperlinks
+\usepackage{setspace}       % Line spacing control
+\usepackage{parskip}        % Space between paragraphs
+\usepackage{tikz}
+
+% Document Metadata
+\title{Conway's Game of Life Project Report - Algorithm Engineering WS 24/25}
+\author{Jonas Peters, Stefan Wagner, Angelo Wieden}
+\date{\today}
+
+% Document Content
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Implementation}
+
+\subsection{Sequential}
+...........
+
+\subsection{MPI-Parallel}
+...........
+
+\section{Testing}
+
+\subsection{Introduction to the Header-Only C++ Catch Framework}
+The framework we used for unit-testing our serial and parallelized Game-Of-Life versions was the header-only implementation of CATCH, a lightweight and portable C++ testing framework useable in a file by including the \texttt{<catch.hpp>} header and defining the \texttt{CATCH\_CONFIG\_MAIN} macro, which will generate a \texttt{main} function acting as a starting point for running all test cases. This allowed us to maintain readability through its clear syntax with better test reports as well as debugging and output logging capabilities than normal, scattered \texttt{assert()} calls from the library \texttt{<cassert>}.
+
+\subsection{Sequential Test Design and Implementation}
+Since the sequential version is not only a standalone version on its own, as it also doubles as a base for the parallelized implementation, there was a need to thoroughly make sure that everything works as expected through a plethora of unit tests for the general functionality and edge cases alike. This is done in the \texttt{tests.cpp} file included in the project and can be executed using \texttt{make test\_serial} in the console. All in all, there are 30 assertions with 8 and 22 assigned to our \texttt{Grid} and \texttt{GameOfLife} classes, respectively.
+
+The \texttt{Grid} testing includes basic Grid operations, such as 
+\begin{itemize}
+    \item setting and getting cell data,
+    \item checking the grid wraparound if a coordinate would be outside of the grid,
+    \item as well as the ability to count neighboring alive cells.
+\end{itemize}
+
+With the \texttt{Grid} unit tests done, the program continues with the \texttt{GameOfLife} tests, covering
+\begin{itemize}
+    \item initialization of states,
+    \item general Conway’s Game of Life cell birth and death logic,
+    \item a few well-known configurations such as stable and oscillating configurations,
+    \item edge-wrapping.
+\end{itemize}
+
+The detailed test results will be found in the \texttt{build/tests\_serial/output.txt} file.
+
+\subsection{Parallel Test Design Using MPI}
+Parallelized testing was done through \texttt{tests\_mpi.cpp} in the project folder and can be run by executing \texttt{make test\_mpi} in the console. This time, there is not much of a need to re-test all the things that worked in the serial version, as both \texttt{Grid} and \texttt{GameOfLife} classes still hold true to the main integrity of the build. However, the MPI version provides the challenge of processes needing information regarding their boundary sub-grid cells. Due to this, the main importance of the parallelized tests was that the processes can communicate with each other. Therefore, we opted for a four-processes, non-square grid test featuring communication by letting a glider fly through specifically the middle of a 2x2 sub-grid layout where the most boundary information is needed, ensuring that the \texttt{exchange()} function of our \texttt{MPIProcess} class works as intended. 
+
+It is worth mentioning that the tests done do not create \texttt{.ppm} files, as simply working with the binary data of the game-states is enough to prove that both the serial and parallelized versions work without issues, while being easier to implement and debug.
+
+Similarly to the prior serialized tests, the detailed test results will be found in the \\\texttt{build/tests\_mpi/output.txt} file.
+
+\subsection{Testing Hurdles and Feedback}
+As opposed to the serial unit tests, which were working flawlessly from the start, we had some struggles using CATCH as our testing framework on the parallelized version. This is the case as MPI requires being initialized in the \texttt{main} function of the program. However, as mentioned beforehand, the \texttt{CATCH\_CONFIG\_MAIN} macro automatically generates said \texttt{main} function. This problem was able to be worked out by defining the \texttt{CATCH\_CONFIG\_RUNNER} macro instead, allowing us to define our own \texttt{main} function and initializing MPI before manually starting the unit tests through \texttt{Catch::Session().run();}.
+
+However, this comes at the cost of all 4 processes reporting their CATCH session at the end, while only the master process being of importance.
+
+These test cases helped us find a bug in the parallelized version, which caused alive cells to sometimes get moved to the outer edges of the grid after the MPI processes exchanged data with each other in sub-grid bordering scenarios.
+\begin{center}
+    \begin{tikzpicture}
+        % First Image with Title
+        \node at (0, 1.2) {\textbf{Game Tick 1}}; % Image title above the image
+        \node (A) at (0, -0.5) {\includegraphics[width=3cm]{Image1.png}};
+        
+        % Second Image with Title
+        \node at (5, 1.2) {\textbf{Game Tick 2}}; % Image title above the image
+        \node (B) at (5, -0.5) {\includegraphics[width=3cm]{Image2.png}};
+        
+        % Third Image with Title
+        \node at (10, 1.2) {\textbf{Game Tick 3}}; % Image title above the image
+        \node (C) at (10, -0.5) {\includegraphics[width=3cm]{Image3.png}};
+        
+        % Arrows
+        \draw[->, very thick] (A.east) -- (B.west);
+        \draw[->, very thick] (B.east) -- (C.west);
+    \end{tikzpicture}
+
+    % Subtitle
+    \vspace{-0.25cm} % Adjust vertical spacing if needed
+    \textit{*light grey pixels show the supposed locations of cells}
+\end{center}
+
+This alone highlights the importance of extensive and thoroughly put together test cases in program development, as the bug could have otherwise been easily overlooked.
+
+\section{Scaling Study}
+
+\subsection{Placeholder}
+...........
+
+\end{document}
