@@ -4,9 +4,9 @@ all:
 debug:
 	rm -f ./a.out && mpic++ ./main.cpp && mpirun -np 4 ./a.out > output.
 
-test:
-	mkdir -p build/tests_non_mpi && \
-	cd build && g++ ../tests.cpp -o tests_non_mpi/tests && ./tests_non_mpi/tests -s > tests_non_mpi/output.txt
+test_serial:
+	mkdir -p build/tests_serial && \
+	cd build && g++ ../tests.cpp -o tests_serial/tests && ./tests_serial/tests -s > tests_serial/output.txt
 
 test_mpi:
 	mkdir -p build/tests_mpi && \
