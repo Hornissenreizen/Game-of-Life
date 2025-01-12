@@ -16,3 +16,6 @@ Or for the parallelized version:
 ```bash
 make test_mpi
 ```
+
+# Link to the repository
+https://github.com/Hornissenreizen/Game-of-Life
