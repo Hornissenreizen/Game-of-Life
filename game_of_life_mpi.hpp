@@ -215,7 +215,8 @@ void MPIProcess::to_pgm(const std::string& filename) const {
     std::vector<unsigned char> local_data(subgame_without_border.get_rows() * subgame_without_border.get_cols());
     for (size_t i = 0; i < subgame_without_border.get_rows(); ++i) {
         for (size_t j = 0; j < subgame_without_border.get_cols(); ++j) {
-            local_data[i * subgame_without_border.get_cols() + j] = subgame_without_border.get(i, j) ? 1 : 0;
+            unsigned char pixel = subgame_without_border.get(i, j) * 255;
+            local_data[i * subgame_without_border.get_cols() + j] = pixel;
         }
     }
 
