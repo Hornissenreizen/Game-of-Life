@@ -28,11 +28,36 @@
 
 \section{Implementation}
 
-\subsection{Sequential}
-...........
+\subsection{Sequential Implementation}
+The general idea of our sequential implementation of Conway's Game of Life in the file \\\texttt{game\_of\_life.hpp} is as follows: \\
+We utilized a \texttt{Grid} class to store, access and modify game states as well providing a basis for counting live neighbors. Furthermore, a \texttt{GameOfLife} class was needed to manage the simulation logic, initialization as well as subgrid operations and input / output handling, which we will get to later on.
 
-\subsection{MPI-Parallel}
-...........
+The \texttt{Grid} class' stores the grid bit by bit in a \texttt{unsigned char* grid}, as well as grid information like \texttt{rows, cols, element\_count} and \texttt{\_byte\_count} of \texttt{size\_t}. Key functions include: 
+\begin{itemize}
+    \item \texttt{inline bool \_get\_at\_bit\_index(size\_t \_index)} and \\\texttt{inline void \_set\_at\_bit\_index(size\_t \_index, bool \_val)} to retrieve or set the state of a specific cell
+    \item \texttt{inline size\_t \_to\_index(int \_row, int \_col)} to calculate the linear index of a cell
+    \item \texttt{bool get(int row, int col)} and \texttt{bool set(int row, int col)} as public cell state retrieval and modification tools
+    \item \texttt{size\_t no\_neighbors(int row, int col)} to get the number of alive cell neighbors by checking each cell in a 3x3 grid radius around the target cell
+    \item as well as getters and setters for entire rows and columns and a way to create and set smaller subgrids stemming from a grid 
+\end{itemize}
+
+One could say that the \texttt{Grid} class is the heart of our implementation, setting us up with the tools needed for the actual simulation logic of Conway's Game of Life in the \texttt{GameOfLife} class, which stores our current \texttt{state} and \texttt{next\_state} as \texttt{Grid} objects, and game information in terms of \texttt{rows, cols} and \texttt{element\_count} as \texttt{size\_t}. The game logic is handled by the following functions:
+\begin{itemize}
+    \item a group of getters and setters implementing those of the \texttt{Grid} class as an intersection for our current \texttt{state}
+    \item \texttt{void init(std::initializer\_list<std::initializer\_list<size\_t>>\&\& l)} to initialize a game with the passed on pairs of alive cells' coordinates like \{0,2\},\{1,2\},... by setting the state of each cell which was passed on through its coordinate pair as alive
+    \item \texttt{inline bool becomes\_alive(size\_t row, size\_t col)} used to check if a cell should stay or become alive in the next game tick, based on the normal Conway's Game of Life logic which goes as follows: A cell is alive in the next tick if it has exactly 2 living neighbors and is alive itself, or if it has exactly 3 living neighbors regardless of the cell's state.
+    \item \texttt{void tick()} to go to the next game tick by checking each cell if it should come alive, setting it accordingly, and swapping the current \texttt{state} and \texttt{next\_state}
+    \item and a list of helper functions regarding debugging, creating and setting sub-versions of \texttt{GameOfLife} and input / output handling
+\end{itemize}
+
+Lastly, to account for times when an index would wander outside of the game grid, we implemented a \texttt{inline int MOD(int a, int b) \{return (a\%b+b) \% b;\}} function, which wraps the out-of-bounds index around to the other side, ensuring seam-less edge transitions. 
+Altogether, we are now able to able to initialize a game, and tick it forward however often we like, sequentially.
+
+\subsection{MPI-Parallel Implementation}
+
+\subsection{Input/Output Handling}
+Parsing a Game of Life implementation solely through hardcoding the size of the board and alive starting cells is not the only supported way of initialization, as \texttt{GameOfLife}'s class function \texttt{void initialize\_from\_pgm(const std::string\&)} allows us to freely start from any P5 \texttt{.pgm} file by parsing the board's columns and rows, which can be read in the second line of the \texttt{.pgm} file, as well as reading the following \texttt{column x row} wide matrix of data, and interpreting them as alive cells, if the data holds any other value than 0.
+As outputs, we have the options of converting the final state of the game to a P5 \texttt{.pgm} file by storing the \texttt{.pgm} subtype as P5, our matrix dimensions, and each cell of our grid as black or white (0 or 255) depending on their state through the \texttt{GameOfLife} class function \texttt{void to\_pgm(const std::string\&) const} or simply by printing the resulting bit-matrix using \texttt{void print()}, also from the \texttt{GameOfLife} class.
 
 \section{Testing}
 
@@ -54,13 +79,13 @@ With the \texttt{Grid} unit tests done, the program continues with the \texttt{G
     \item initialization of states,
     \item general Conway’s Game of Life cell birth and death logic,
     \item a few well-known configurations such as stable and oscillating configurations,
-    \item edge-wrapping.
+    \item and edge-wrapping.
 \end{itemize}
 
 The detailed test results will be found in the \texttt{build/tests\_serial/output.txt} file.
 
 \subsection{Parallel Test Design Using MPI}
-Parallelized testing was done through \texttt{tests\_mpi.cpp} in the project folder and can be run by executing \texttt{make test\_mpi} in the console. This time, there is not much of a need to re-test all the things that worked in the serial version, as both \texttt{Grid} and \texttt{GameOfLife} classes still hold true to the main integrity of the build. However, the MPI version provides the challenge of processes needing information regarding their boundary sub-grid cells. Due to this, the main importance of the parallelized tests was that the processes can communicate with each other. Therefore, we opted for a four-processes, non-square grid test featuring communication by letting a glider fly through specifically the middle of a 2x2 sub-grid layout where the most boundary information is needed, ensuring that the \texttt{exchange()} function of our \texttt{MPIProcess} class works as intended. 
+Parallelized testing was done through \texttt{tests\_mpi.cpp} in the project folder and can be run by executing \texttt{make test\_mpi} in the console. This time, there is not much of a need to re-test all the things that worked in the serial version, as both \texttt{Grid} and \texttt{GameOfLife} classes still hold true to the main integrity of the build. However, the MPI version provides the challenge of processes needing information regarding their boundary sub-grid cells. Due to this, the main importance of the parallelized tests was that the processes can properly exchange data with each other. Therefore, we opted for a four-processes, non-square grid test featuring communication by letting a glider fly through specifically the middle of a 2x2 sub-grid layout where the most boundary information is needed, ensuring that the \texttt{exchange()} function of our \texttt{MPIProcess} class works as intended. 
 
 It is worth mentioning that the tests done do not create \texttt{.ppm} files, as simply working with the binary data of the game-states is enough to prove that both the serial and parallelized versions work without issues, while being easier to implement and debug.
 

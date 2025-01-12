@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.11)  12 JAN 2025 16:58
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.11)  12 JAN 2025 21:41
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -747,68 +747,71 @@ LaTeX Font Info:    External font `lmex10' loaded for size
 \tf@toc=\write5
 \openout5 = `paper.toc'.
 
-LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 4
-0.
+LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 3
+2.
 
 (c:/texlive/2024/texmf-dist/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
-
-[1
-
-{c:/texlive/2024/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{c:/texlive/2024/
-texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}]
-LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 4
+LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 3
 7.
 
 (c:/texlive/2024/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 
-[2{c:/texlive/2024/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}]
-<Image1.png, id=74, 155.83218pt x 155.83218pt>
+[1
+
+{c:/texlive/2024/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{c:/texlive/2024/
+texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}{c:/texlive/2024/texmf-dist/fonts/enc/d
+vips/lm/lm-ts1.enc}]
+
+[2]
+
+[3]
+<Image1.png, id=83, 155.83218pt x 155.83218pt>
 File: Image1.png Graphic file (type png)
 <use Image1.png>
-Package pdftex.def Info: Image1.png  used on input line 79.
+Package pdftex.def Info: Image1.png  used on input line 104.
 (pdftex.def)             Requested size: 85.35826pt x 85.35843pt.
-<Image2.png, id=75, 155.83218pt x 155.83218pt>
+<Image2.png, id=84, 155.83218pt x 155.83218pt>
 File: Image2.png Graphic file (type png)
 <use Image2.png>
-Package pdftex.def Info: Image2.png  used on input line 83.
+Package pdftex.def Info: Image2.png  used on input line 108.
 (pdftex.def)             Requested size: 85.35826pt x 85.35843pt.
-<Image3.png, id=76, 155.83218pt x 155.07938pt>
+<Image3.png, id=85, 155.83218pt x 155.07938pt>
 File: Image3.png Graphic file (type png)
 <use Image3.png>
-Package pdftex.def Info: Image3.png  used on input line 87.
+Package pdftex.def Info: Image3.png  used on input line 112.
 (pdftex.def)             Requested size: 85.35826pt x 84.94606pt.
 
 
-[3 <./Image1.png> <./Image2.png> <./Image3.png>] (./paper.aux)
+[4 <./Image1.png> <./Image2.png> <./Image3.png>] (./paper.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 1
 L3 programming layer <2024-12-25>
  ***********
 Package rerunfilecheck Info: File `paper.out' has not changed.
-(rerunfilecheck)             Checksum: 94B8C424E978FF32CF387563F831EF10;1668.
+(rerunfilecheck)             Checksum: D2BD72980B9E847F8129C3140568B47C;1990.
  ) 
 Here is how much of TeX's memory you used:
- 21212 strings out of 473217
- 388382 string characters out of 5721068
- 764366 words of memory out of 5000000
- 44072 multiletter control sequences out of 15000+600000
+ 21215 strings out of 473217
+ 388418 string characters out of 5721068
+ 766366 words of memory out of 5000000
+ 44073 multiletter control sequences out of 15000+600000
  602120 words of font info for 69 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 84i,6n,93p,948b,620s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,6n,93p,959b,620s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/texlive/2024/texmf-dist/fonts/type1/public/lm/lmbx10.pfb><c:/texlive/2024
 /texmf-dist/fonts/type1/public/lm/lmbx12.pfb><c:/texlive/2024/texmf-dist/fonts/
 type1/public/lm/lmr10.pfb><c:/texlive/2024/texmf-dist/fonts/type1/public/lm/lmr
 12.pfb><c:/texlive/2024/texmf-dist/fonts/type1/public/lm/lmr17.pfb><c:/texlive/
 2024/texmf-dist/fonts/type1/public/lm/lmri10.pfb><c:/texlive/2024/texmf-dist/fo
 nts/type1/public/lm/lmtt10.pfb>
-Output written on paper.pdf (3 pages, 194396 bytes).
+Output written on paper.pdf (4 pages, 202934 bytes).
 PDF statistics:
- 122 PDF objects out of 1000 (max. 8388607)
- 98 compressed objects within 1 object stream
- 15 named destinations out of 1000 (max. 500000)
- 108 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 132 PDF objects out of 1000 (max. 8388607)
+ 106 compressed objects within 2 object streams
+ 17 named destinations out of 1000 (max. 500000)
+ 116 words of extra memory for PDF output out of 10000 (max. 10000000)
 
