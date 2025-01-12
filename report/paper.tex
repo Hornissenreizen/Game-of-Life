@@ -53,10 +53,16 @@ One could say that the \texttt{Grid} class is the heart of our implementation, s
 Lastly, to account for times when an index would wander outside of the game grid, we implemented a \texttt{inline int MOD(int a, int b) \{return (a\%b+b) \% b;\}} function, which wraps the out-of-bounds index around to the other side, ensuring seam-less edge transitions. 
 Altogether, we are now able to able to initialize a game, and tick it forward however often we like, sequentially.
 
-\subsection{MPI-Parallel Implementation}
+\subsection{MPI-Parallel}
+One factor in parallelization using MPI is the distribution of the processes across the grid. We want to achieve as square a shape as possible for the grid segments processed by the processes in order to maximize the area compared to the circumference, or to minimize the proportion of messages compared to the serial computing time. To do this, we divide the processes into a grid of rows and columns. The number of processes per plate and row can be defined using command line arguments. This allows us to divide the processes optimally for different image sizes and numbers of processes. 
+
+Since each calculation step depends on cells that lie outside the respective subgrid, each process allocates a number of “ghost cells” in each dimension. These "ghost cells" are used to store the values of the neighboring processes, which are exchanged between the processes via MPI. 
+
+When dividing the processes into a 2-dimensional grid, the question arises as to how we deal with the grid points at the corners of the sub-grids. The content of the grid cells in the corners is required by the processes that are diagonally adjacent to these cells, i.e. are not direct neighbors. To send the cell content, there is therefore the option of sending a small message with the content of a single cell to the diagonally adjacent process or the cell content can be sent first to the right and left neighbors, for example, which then sends two of its "ghost cells" to the upper and lower neighbors. For the sake of simplicity, we have opted for the second option.
 
 \subsection{Input/Output Handling}
 Parsing a Game of Life implementation solely through hardcoding the size of the board and alive starting cells is not the only supported way of initialization, as \texttt{GameOfLife}'s class function \texttt{void initialize\_from\_pgm(const std::string\&)} allows us to freely start from any P5 \texttt{.pgm} file by parsing the board's columns and rows, which can be read in the second line of the \texttt{.pgm} file, as well as reading the following \texttt{column x row} wide matrix of data, and interpreting them as alive cells, if the data holds any other value than 0.
+
 As outputs, we have the options of converting the final state of the game to a P5 \texttt{.pgm} file by storing the \texttt{.pgm} subtype as P5, our matrix dimensions, and each cell of our grid as black or white (0 or 255) depending on their state through the \texttt{GameOfLife} class function \texttt{void to\_pgm(const std::string\&) const} or simply by printing the resulting bit-matrix using \texttt{void print()}, also from the \texttt{GameOfLife} class.
 
 \section{Testing}
@@ -124,8 +130,11 @@ These test cases helped us find a bug in the parallelized version, which caused 
 This alone highlights the importance of extensive and thoroughly put together test cases in program development, as the bug could have otherwise been easily overlooked.
 
 \section{Scaling Study}
+In the weak scaling study, we found an almost linear relationship between runtime and the number of processes. The serial runtime is 12053.2 s. With 8 processes, the runtime was only 1517.32 s and with 32 processes only 382.314 s.
 
-\subsection{Placeholder}
-...........
+For the strong scaling study, the time is limited to 5 minutes and the number of “ticks” processed in each case is displayed. One process creates 2 “ticks”, 8 processes 18 “ticks” and 32 processes “82” ticks. This increases both the workload and the number of processes. 
+
+% \subsection{Placeholder}
+% ...........
 
 \end{document}
