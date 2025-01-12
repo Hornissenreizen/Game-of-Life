@@ -29,7 +29,7 @@
 \section{Implementation}
 
 \subsection{Sequential}
-...........
+Firstly, we had to implement a sequential version of the Game of Life. We created a class \texttt{Grid} that represents the game board. The grid is a 2D array of cells, where each cell can be either alive or dead. The class provides methods to set and get the state of a cell, as well as to count the number of alive neighbors of a cell. Interios, we used an array of unsigned chars to store the state of the cells. This way, we can store the state of 8 cells in a single byte. This is important for the parallel version, as we can send the state of multiple cells in a single message. In this single threaded sequential version we have to ensure that the game loops back around at the edges of the grid. This is done by using the modulo operator to calculate the index of the cell to the left, right, above or below the current cell. All the other implementation details can be found in the code.
 
 \subsection{MPI-Parallel}
 One factor in parallelization using MPI is the distribution of the processes across the grid. We want to achieve as square a shape as possible for the grid segments processed by the processes in order to maximize the area compared to the circumference, or to minimize the proportion of messages compared to the serial computing time. To do this, we divide the processes into a grid of rows and columns. The number of processes per plate and row can be defined using command line arguments. This allows us to divide the processes optimally for different image sizes and numbers of processes. 
@@ -38,9 +38,6 @@ Since each calculation step depends on cells that lie outside the respective sub
 
 When dividing the processes into a 2-dimensional grid, the question arises as to how we deal with the grid points at the corners of the sub-grids. The content of the grid cells in the corners is required by the processes that are diagonally adjacent to these cells, i.e. are not direct neighbors. To send the cell content, there is therefore the option of sending a small message with the content of a single cell to the diagonally adjacent process or the cell content can be sent first to the right and left neighbors, for example, which then sends two of its "ghost cells" to the upper and lower neighbors. For the sake of simplicity, we have opted for the second option.
 
-Translated with DeepL.com (free version)
-
-Translated with DeepL.com (free version)
 
 \section{Testing}
 
@@ -111,7 +108,7 @@ In the weak scaling study, we found an almost linear relationship between runtim
 
 For the strong scaling study, the time is limited to 5 minutes and the number of “ticks” processed in each case is displayed. One process creates 2 “ticks”, 8 processes 18 “ticks” and 32 processes “82” ticks. This increases both the workload and the number of processes. 
 
-\subsection{Placeholder}
-...........
+% \subsection{Placeholder}
+% ...........
 
 \end{document}
